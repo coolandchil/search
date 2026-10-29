@@ -70,6 +70,11 @@ input{flex:1;border:0;outline:0;background:transparent;color:var(--fg);font-size
 .ytmenu{width:100%;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
 .ytmenu.hidden{display:none}
 .suglabel2{font-size:12px;color:#5f6368}
+.fsall{position:fixed;top:8px;right:8px;z-index:100;background:rgba(255,255,255,.9);border:1px solid #dfe1e5;border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;color:#202124}
+.fsall:hover{background:#f1f3f4}
+@media (prefers-color-scheme:dark){.fsall{background:rgba(48,49,52,.9);color:#e8eaed;border-color:#5f6368}}
+.fsbox.fs:has(.shortsfeed){background:#000}
+.fsbox.fs .shortsfeed{height:100%;width:min(100%,calc(100vh * 0.5625 + 80px));max-width:none;margin:0 auto;border-radius:0}
 </style>
 </head>
 <body>
@@ -131,6 +136,11 @@ function renderSuggest(box){
     var ob = document.createElement("button"); ob.type = "button"; ob.className = "chip"; ob.textContent = c[0];
     ob.onclick = function(){ var inp = document.getElementById("q1") || document.getElementById("q"); inp.value = c[1]; inp.focus(); ym.classList.add("hidden"); };
     ym.appendChild(ob);
+  });
+  [["\uD83C\uDFB2 Random video", "video"], ["\uD83C\uDFB2 Random Short", "shorts"]].forEach(function(c){
+    var rb = document.createElement("button"); rb.type = "button"; rb.className = "chip"; rb.textContent = c[0];
+    rb.onclick = function(){ ym.classList.add("hidden"); randomPlay(c[1]); };
+    ym.appendChild(rb);
   });
   var yb = document.createElement("button"); yb.type = "button"; yb.className = "chip"; yb.textContent = "▶ YouTube";
   yb.onclick = function(){ ym.classList.toggle("hidden"); };
@@ -245,7 +255,9 @@ function openShorts(list, start, topic){
   var nav = document.createElement("div"); nav.className = "shortsnav";
   var prev = document.createElement("button"); prev.type = "button"; prev.className = "tab"; prev.textContent = "↑ Previous";
   var next = document.createElement("button"); next.type = "button"; next.className = "tab"; next.textContent = "Next ↓";
-  nav.appendChild(prev); nav.appendChild(next);
+  var rnd = document.createElement("button"); rnd.type = "button"; rnd.className = "tab"; rnd.textContent = "\uD83C\uDFB2 Random";
+  var sfs = document.createElement("button"); sfs.type = "button"; sfs.className = "tab"; sfs.textContent = "Full screen";
+  nav.appendChild(prev); nav.appendChild(next); nav.appendChild(rnd); nav.appendChild(sfs);
   function addSlot(it){
     var slot = document.createElement("div"); slot.className = "shortslot";
     var box = document.createElement("div"); box.className = "shortbox";
@@ -294,7 +306,10 @@ function openShorts(list, start, topic){
   function go(d){ var n = cur + d; if(n < 0 || n >= slots.length) return; feed.scrollTo({ top: n * feed.clientHeight, behavior: "smooth" }); }
   feed.addEventListener("scroll", function(){ clearTimeout(timer); timer = setTimeout(function(){ if(feed.clientHeight) activate(Math.round(feed.scrollTop / feed.clientHeight)); }, 120); });
   prev.onclick = function(){ go(-1); }; next.onclick = function(){ go(1); };
-  reader.appendChild(back); reader.appendChild(h); reader.appendChild(count); reader.appendChild(hint); reader.appendChild(link); reader.appendChild(feed); reader.appendChild(nav);
+  rnd.onclick = function(){ if(slots.length < 2) return; var n; do { n = Math.floor(Math.random() * slots.length); } while(n === cur); feed.scrollTop = n * feed.clientHeight; };
+  sfs.onclick = function(){ enterFull(sbox); };
+  if(window.ResizeObserver) new ResizeObserver(function(){ if(cur >= 0 && feed.clientHeight) feed.scrollTop = cur * feed.clientHeight; }).observe(feed);
+  reader.appendChild(back); reader.appendChild(h); reader.appendChild(count); reader.appendChild(hint); reader.appendChild(link); var sbox = document.createElement("div"); sbox.className = "fsbox"; sbox.appendChild(feed); sbox.appendChild(mkExit(sbox)); reader.appendChild(sbox); reader.appendChild(nav);
   items.forEach(addSlot);
   shortsState = { go: go, feed: feed };
   var s0 = Math.min(start || 0, slots.length - 1);
@@ -343,6 +358,30 @@ async function openApp(s){
   }catch(e){ note.textContent = "Could not load this one here (" + e.message + "). Use “Open original page” above."; }
 }
 
+var RANDOM_TOPICS = ["funny animals","satisfying","cooking","science experiments","cool inventions","amazing skills","street food","magic tricks","space","nature","woodworking","painting","basketball","soccer","music","dance","travel","life hacks","comedy sketch","cats","dogs","art","trains","robots","skateboarding","baking"];
+function pickTopic(){ return RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)]; }
+function shuffle(a){ for(var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+async function randomPlay(kind){
+  if(typeof home !== "undefined" && home && home.classList){ home.classList.add("hidden"); page.classList.remove("hidden"); }
+  sugBox.classList.add("hidden"); coderBox.classList.add("hidden"); reader.classList.add("hidden"); out.classList.remove("hidden");
+  show("Finding a random " + (kind === "shorts" ? "Short" : "video") + "...");
+  try{
+    for(var attempt = 0; attempt < 3; attempt++){
+      var topic = pickTopic();
+      var data = await call("q=" + encodeURIComponent(topic + (kind === "shorts" ? " YouTube shorts" : " video")) + "&site=youtube.com");
+      var list = data.results.filter(function(r){
+        if(kind === "shorts") return isShortUrl(r.url);
+        var e = embedUrl(r.url); return e !== r.url && !isShortUrl(r.url) && /\/embed\/[\w-]{6,}$/.test(e);
+      });
+      if(!list.length) continue;
+      shuffle(list);
+      if(kind === "shorts") openShorts(list, 0, topic); else openReader({ title: list[0].title, url: list[0].url });
+      return;
+    }
+    show("Couldn’t find one this time. Press Random again.");
+  }catch(e){ show("Something went wrong: " + e.message); }
+}
+
 async function openReader(r){
   coderBox.classList.add("hidden");
   out.classList.add("hidden");
@@ -367,6 +406,7 @@ async function openReader(r){
   };
   tabs.appendChild(bRun);
   var bFull = document.createElement("button"); bFull.type = "button"; bFull.className = "tab"; bFull.textContent = "Full screen"; bFull.onclick = function(){ enterFull(fbox); }; tabs.appendChild(bFull);
+  if(embedUrl(r.url) !== r.url && /youtube\.com|youtu\.be/i.test(r.url)){ var bRand = document.createElement("button"); bRand.type = "button"; bRand.className = "tab"; bRand.textContent = "\uD83C\uDFB2 Random video"; bRand.onclick = function(){ randomPlay("video"); }; tabs.appendChild(bRand); }
   var note = document.createElement("div"); note.className = "note"; note.textContent = "If the page below is blank, that site doesn’t allow being shown here. Switch to Text view.";
   var frame = document.createElement("iframe"); frame.className = "frame";
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups");
@@ -485,6 +525,17 @@ run = function(q){ if(!q.trim()) return; home.classList.add("hidden"); page.clas
 document.getElementById("f1").addEventListener("submit", function(e){ e.preventDefault(); run(document.getElementById("q1").value); });
 document.getElementById("f2").addEventListener("submit", function(e){ e.preventDefault(); run(document.getElementById("q2").value); });
 document.getElementById("logo2").addEventListener("click", function(){ closeReader(); page.classList.add("hidden"); home.classList.remove("hidden"); document.getElementById("q1").focus(); });
+var fsAll = document.createElement("button"); fsAll.type = "button"; fsAll.className = "fsall"; fsAll.textContent = "⛶ Full screen";
+fsAll.onclick = function(){
+  if(document.fullscreenElement){ if(document.exitFullscreen) document.exitFullscreen(); return; }
+  var el = document.documentElement, embedded = window.top !== window.self, p = null;
+  try{ p = el.requestFullscreen ? el.requestFullscreen() : null; }catch(e){}
+  if(p && p.catch) p.catch(function(){ if(embedded) window.open(location.href, "_blank"); });
+  else if(!p && embedded) window.open(location.href, "_blank");
+};
+document.addEventListener("fullscreenchange", function(){ fsAll.textContent = document.fullscreenElement ? "Exit full screen" : "⛶ Full screen"; });
+document.body.appendChild(fsAll);
+
 </script>
 </body>
 </html>
