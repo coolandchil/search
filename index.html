@@ -75,6 +75,17 @@ input{flex:1;border:0;outline:0;background:transparent;color:var(--fg);font-size
 @media (prefers-color-scheme:dark){.fsall{background:rgba(48,49,52,.9);color:#e8eaed;border-color:#5f6368}}
 .fsbox.fs:has(.shortsfeed){background:#000}
 .fsbox.fs .shortsfeed{height:100%;width:min(100%,calc(100vh * 0.5625 + 80px));max-width:none;margin:0 auto;border-radius:0}
+.proxyaddr{width:100%;padding:8px 12px;margin:8px 0;border:1px solid var(--line,#dfe1e5);border-radius:18px;background:transparent;color:inherit;font-size:14px}
+.yth{max-width:1100px;margin:0 auto}
+.ythbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
+.ythbar input{flex:1;min-width:180px;padding:10px 16px;border:1px solid var(--line,#dfe1e5);border-radius:22px;background:transparent;color:inherit;font-size:16px}
+.ythpills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.ythgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px 14px}
+.ythcard{cursor:pointer}
+.ythcard img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#e8eaed}
+.ythcard .tt{margin:8px 0 0;font-size:14px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ythcard:hover .tt{text-decoration:underline}
+.ythsec{font-size:15px;font-weight:700;margin:20px 0 10px}
 </style>
 </head>
 <body>
@@ -118,8 +129,25 @@ function closeReader(){ coderBox.classList.add("hidden"); reader.classList.add("
 var SUGGESTED = [
   { name: "Cloud Moon", url: "https://web.cloudmoonapp.com" },
   { name: "Artic", url: "https://storage.googleapis.com/math-homework/index.html", app: true },
-  { name: "Duck Math", url: "https://storage.googleapis.com/mathlessons/duckmath.svg#/", app: true }
+  { name: "Duck Math", url: "https://storage.googleapis.com/mathlessons/duckmath.svg#/", app: true },
+  { name: "bull-33", url: "https://s3.amazonaws.com/bullpxbk/index.html", app: true },
+  { name: "Strawberrii", url: "https://s3.amazonaws.com/strawberrii.index.svg", app: true },
+  { name: "fern", url: "https://s3.amazonaws.com/readingsets/index.svg", app: true },
+  { name: "Utopiaweb", url: "https://s3.amazonaws.com/utopiaweb/index.html", app: true }
 ];
+function openLoader(){
+  if(typeof home !== "undefined" && home && home.classList){ home.classList.add("hidden"); page.classList.remove("hidden"); }
+  sugBox.classList.add("hidden"); coderBox.classList.add("hidden"); out.classList.add("hidden");
+  reader.classList.remove("hidden"); reader.innerHTML = "";
+  var back = document.createElement("button"); back.type = "button"; back.className = "back"; back.textContent = "← Back"; back.onclick = closeReader;
+  var h = document.createElement("h2"); h.textContent = "Website loader";
+  var pv = makeProxyView("", function(t){ if(t) h.textContent = t; });
+  pv.querySelector(".note").textContent = "Type a website address above and press Enter.";
+  pv.querySelector(".proxyaddr").placeholder = "Type a website address, like example.com";
+  reader.appendChild(back); reader.appendChild(h); reader.appendChild(pv);
+  window.scrollTo(0,0); pv.querySelector(".proxyaddr").focus();
+}
+
 function renderSuggest(box){
   box.innerHTML = "";
   var l = document.createElement("div"); l.className = "suglabel"; l.textContent = "Suggested sites"; box.appendChild(l);
@@ -130,6 +158,7 @@ function renderSuggest(box){
   });
   var cb = document.createElement("button"); cb.type = "button"; cb.className = "chip"; cb.textContent = "</> Run your own code"; cb.onclick = function(){ openCoder(); };
   box.appendChild(cb);
+  var wl = document.createElement("button"); wl.type = "button"; wl.className = "chip"; wl.textContent = "\uD83C\uDF10 Load a website"; wl.onclick = openLoader; box.appendChild(wl);
   var ym = document.createElement("div"); ym.className = "ytmenu hidden";
   var yl = document.createElement("span"); yl.className = "suglabel2"; yl.textContent = "Search YouTube for:"; ym.appendChild(yl);
   [["Videos", "youtube: "], ["Channels", "channel: "], ["Shorts", "shorts: "]].forEach(function(c){
@@ -137,6 +166,7 @@ function renderSuggest(box){
     ob.onclick = function(){ var inp = document.getElementById("q1") || document.getElementById("q"); inp.value = c[1]; inp.focus(); ym.classList.add("hidden"); };
     ym.appendChild(ob);
   });
+  var hb = document.createElement("button"); hb.type = "button"; hb.className = "chip"; hb.textContent = "\uD83C\uDFE0 YouTube home"; hb.onclick = function(){ ym.classList.add("hidden"); openYtHome(); }; ym.appendChild(hb);
   [["\uD83C\uDFB2 Random video", "video"], ["\uD83C\uDFB2 Random Short", "shorts"]].forEach(function(c){
     var rb = document.createElement("button"); rb.type = "button"; rb.className = "chip"; rb.textContent = c[0];
     rb.onclick = function(){ ym.classList.add("hidden"); randomPlay(c[1]); };
@@ -361,6 +391,52 @@ async function openApp(s){
 var RANDOM_TOPICS = ["funny animals","satisfying","cooking","science experiments","cool inventions","amazing skills","street food","magic tricks","space","nature","woodworking","painting","basketball","soccer","music","dance","travel","life hacks","comedy sketch","cats","dogs","art","trains","robots","skateboarding","baking"];
 function pickTopic(){ return RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)]; }
 function shuffle(a){ for(var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+var ytHomeCache = null;
+async function openYtHome(){
+  if(typeof home !== "undefined" && home && home.classList){ home.classList.add("hidden"); page.classList.remove("hidden"); }
+  sugBox.classList.add("hidden"); coderBox.classList.add("hidden"); reader.classList.add("hidden"); out.classList.remove("hidden");
+  out.innerHTML = "";
+  var wrap = document.createElement("div"); wrap.className = "yth";
+  var bar = document.createElement("form"); bar.className = "ythbar";
+  var inp = document.createElement("input"); inp.type = "text"; inp.placeholder = "Search YouTube"; inp.setAttribute("aria-label", "Search YouTube");
+  var mode = "youtube: ";
+  var sb = document.createElement("button"); sb.type = "submit"; sb.className = "tab on"; sb.textContent = "Search";
+  bar.appendChild(inp); bar.appendChild(sb);
+  bar.onsubmit = function(e){ e.preventDefault(); if(inp.value.trim()) run(mode + inp.value.trim()); };
+  var pills = document.createElement("div"); pills.className = "ythpills";
+  var modeBtns = [];
+  [["Videos","youtube: "],["Shorts","shorts: "],["Channels","channel: "]].forEach(function(c, i){
+    var b = document.createElement("button"); b.type = "button"; b.className = "tab" + (i === 0 ? " on" : ""); b.textContent = c[0];
+    b.onclick = function(){ mode = c[1]; modeBtns.forEach(function(x){ x.className = "tab"; }); b.className = "tab on"; inp.focus(); };
+    modeBtns.push(b); pills.appendChild(b);
+  });
+  var r1 = document.createElement("button"); r1.type = "button"; r1.className = "tab"; r1.textContent = "🎲 Random video"; r1.onclick = function(){ randomPlay("video"); };
+  var r2 = document.createElement("button"); r2.type = "button"; r2.className = "tab"; r2.textContent = "🎲 Random Short"; r2.onclick = function(){ randomPlay("shorts"); };
+  pills.appendChild(r1); pills.appendChild(r2);
+  var sec = document.createElement("div"); sec.className = "ythsec"; sec.textContent = "Videos to start with";
+  var grid = document.createElement("div"); grid.className = "ythgrid";
+  var msg = document.createElement("div"); msg.className = "msg"; msg.textContent = "Loading videos...";
+  wrap.appendChild(bar); wrap.appendChild(pills); wrap.appendChild(sec); wrap.appendChild(msg); wrap.appendChild(grid);
+  out.appendChild(wrap);
+  window.scrollTo(0,0);
+  try{
+    if(!ytHomeCache){
+      var data = await call("q=" + encodeURIComponent(pickTopic() + " popular video") + "&site=youtube.com");
+      ytHomeCache = data.results.filter(function(r){ var e = embedUrl(r.url); return e !== r.url && !isShortUrl(r.url); });
+    }
+    msg.remove();
+    if(!ytHomeCache.length){ var m2 = document.createElement("div"); m2.className = "msg"; m2.textContent = "Nothing to show yet. Use the search box above."; grid.appendChild(m2); return; }
+    ytHomeCache.forEach(function(r){
+      var card = document.createElement("div"); card.className = "ythcard";
+      var tu = thumbFor(r.url);
+      if(tu){ var im = document.createElement("img"); im.alt = ""; im.loading = "lazy"; im.referrerPolicy = "no-referrer"; im.src = tu; card.appendChild(im); }
+      var t = document.createElement("div"); t.className = "tt"; t.textContent = r.title; card.appendChild(t);
+      card.onclick = function(){ openReader(r); };
+      grid.appendChild(card);
+    });
+  }catch(e){ msg.textContent = "Could not load videos (" + e.message + "). You can still search above."; }
+}
+
 async function randomPlay(kind){
   if(typeof home !== "undefined" && home && home.classList){ home.classList.add("hidden"); page.classList.remove("hidden"); }
   sugBox.classList.add("hidden"); coderBox.classList.add("hidden"); reader.classList.add("hidden"); out.classList.remove("hidden");
@@ -382,6 +458,87 @@ async function randomPlay(kind){
   }catch(e){ show("Something went wrong: " + e.message); }
 }
 
+var PROXY_JS = '<script>(function(){function go(u){parent.postMessage({proxyNav:u},"*")}'
+ + 'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href");if(!h||h.charAt(0)==="#"||/^(javascript|mailto|tel):/i.test(h))return;e.preventDefault();go(a.href)},true);'
+ + 'document.addEventListener("submit",function(e){var f=e.target;if(!f||(f.method||"get").toLowerCase()!=="get")return;e.preventDefault();var u=new URL(f.action||location.href);var fd=new FormData(f);fd.forEach(function(v,k){if(typeof v==="string")u.searchParams.set(k,v)});go(u.href)},true);'
+ + '})();<\/script>';
+function proxyHtml(code, base){
+  code = code.replace(/<meta[^>]+http-equiv=["']?(content-security-policy|refresh|x-frame-options)[^>]*>/gi, "");
+  var tag = '<base href="' + base.replace(/"/g, "&quot;") + '">' + PROXY_JS;
+  return /<head[^>]*>/i.test(code) ? code.replace(/<head[^>]*>/i, function(m){ return m + tag; }) : tag + code;
+}
+function makeProxyView(startUrl, onTitle){
+  var wrap = document.createElement("div");
+  var bar = document.createElement("div"); bar.className = "tabs";
+  var bBack = document.createElement("button"); bBack.type = "button"; bBack.className = "tab"; bBack.textContent = "← Back";
+  var bFwd = document.createElement("button"); bFwd.type = "button"; bFwd.className = "tab"; bFwd.textContent = "Forward →";
+  var bReload = document.createElement("button"); bReload.type = "button"; bReload.className = "tab"; bReload.textContent = "Reload";
+  var bFs = document.createElement("button"); bFs.type = "button"; bFs.className = "tab"; bFs.textContent = "Full screen";
+  var addr = document.createElement("input"); addr.type = "text"; addr.className = "proxyaddr"; addr.setAttribute("aria-label", "Address");
+  bar.appendChild(bBack); bar.appendChild(bFwd); bar.appendChild(bReload); bar.appendChild(bFs);
+  var note = document.createElement("div"); note.className = "note";
+  var frame = document.createElement("iframe"); frame.className = "frame";
+  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock");
+  frame.setAttribute("allow", "autoplay; fullscreen; encrypted-media");
+  frame.setAttribute("allowfullscreen", "");
+  var fbox = document.createElement("div"); fbox.className = "fsbox"; fbox.appendChild(frame); fbox.appendChild(mkExit(fbox));
+  bFs.onclick = function(){ enterFull(fbox); };
+  wrap.appendChild(addr); wrap.appendChild(bar); wrap.appendChild(note); wrap.appendChild(fbox);
+  var hist = [], pos = -1, blob = null, token = 0;
+  var YT_HUB = '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:Arial;text-align:center;padding:40px 16px;background:#0f0f0f;color:#fff"><h1 style="color:#f00">▶ YouTube</h1><p>Search videos here, or paste a video, channel or Shorts link in the address bar.</p><form id=f><input id=q placeholder="Search YouTube" style="padding:10px 14px;width:70%;max-width:420px;border-radius:20px;border:0;font-size:16px"> <button style="padding:10px 16px;border-radius:20px;border:0;font-size:16px">Search</button></form><p><button id=s style="padding:8px 14px;border-radius:16px;border:0">Search Shorts</button> <button id=c style="padding:8px 14px;border-radius:16px;border:0">Search Channels</button></p><script>function go(m){var v=document.getElementById("q").value.trim();if(v)parent.postMessage({ytSearch:m+v},"*")}document.getElementById("f").onsubmit=function(e){e.preventDefault();go("youtube: ")};document.getElementById("s").onclick=function(){go("shorts: ")};document.getElementById("c").onclick=function(){go("channel: ")};<\/script></body>';
+  var SB_PROXY = "allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock";
+  async function loadYouTube(u){
+    var x; try{ x = new URL(u); }catch(e){ return false; }
+    if(!/(^|\.)youtube\.com$|^youtu\.be$/i.test(x.hostname)) return false;
+    var emb = embedUrl(u), cb = channelBase(u), sq = x.searchParams.get("search_query");
+    function show(src, pol){ frame.setAttribute("sandbox", SB_PROXY + " allow-same-origin"); frame.setAttribute("referrerpolicy", pol || "strict-origin-when-cross-origin"); frame.src = src; }
+    if(sq){ closeReader(); run("youtube: " + sq); return true; }
+    if(emb !== u){ show(emb); note.textContent = "Showing the YouTube video player."; return true; }
+    if(cb){
+      note.textContent = "Finding this channel’s videos...";
+      try{ var cd = await call("channel=" + encodeURIComponent(cb)); show("https://www.youtube.com/embed/videoseries?list=UU" + cd.id.slice(2)); note.textContent = "Showing this channel’s uploads."; }
+      catch(e){ note.textContent = "Could not find that channel (" + e.message + ")."; }
+      return true;
+    }
+    closeReader(); openYtHome();
+    return true;
+  }
+  async function load(u, push){
+    var my = ++token;
+    note.textContent = "Loading through the proxy...";
+    addr.value = u;
+    if(push !== undefined && await loadYouTube(u)){
+      if(my !== token) return;
+      if(push){ hist = hist.slice(0, pos + 1); hist.push(u); pos = hist.length - 1; }
+      bBack.disabled = pos <= 0; bFwd.disabled = pos >= hist.length - 1; return;
+    }
+    frame.setAttribute("sandbox", SB_PROXY); frame.setAttribute("referrerpolicy", "no-referrer");
+    try{
+      var d = await call("src=" + encodeURIComponent(u) + "&full=1");
+      if(my !== token) return;
+      var isSvg = /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/i.test(d.code);
+      var html = isSvg ? d.code : proxyHtml(d.code, d.url || u);
+      if(blob) URL.revokeObjectURL(blob);
+      blob = URL.createObjectURL(new Blob([html], { type: isSvg ? "image/svg+xml" : "text/html" }));
+      frame.src = blob;
+      if(push){ hist = hist.slice(0, pos + 1); hist.push(u); pos = hist.length - 1; }
+      var t = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(d.code); if(t && onTitle) onTitle(t[1].replace(/\s+/g, " ").trim());
+      note.textContent = "Loaded through the proxy. Links stay inside this page. Some sites that need logins or their own servers may not work fully.";
+    }catch(e){ if(my === token) note.textContent = "Could not load this page through the proxy (" + e.message + ")."; }
+    bBack.disabled = pos <= 0; bFwd.disabled = pos >= hist.length - 1;
+  }
+  function nav(u){ if(/^https?:\/\//i.test(u)) load(u, true); }
+  function onMsg(e){ if(e.source !== frame.contentWindow || !e.data) return; if(typeof e.data.proxyNav === "string") nav(e.data.proxyNav); else if(typeof e.data.ytSearch === "string"){ closeReader(); run(e.data.ytSearch); } }
+  window.addEventListener("message", onMsg);
+  bBack.onclick = function(){ if(pos > 0){ pos--; load(hist[pos], false); } };
+  bFwd.onclick = function(){ if(pos < hist.length - 1){ pos++; load(hist[pos], false); } };
+  bReload.onclick = function(){ if(pos >= 0) load(hist[pos], false); };
+  addr.onkeydown = function(e){ if(e.key === "Enter"){ var v = addr.value.trim(); if(v && !/^https?:\/\//i.test(v)) v = "https://" + v; nav(v); } };
+  var started = false;
+  wrap.start = function(){ if(!started){ started = true; nav(startUrl); } };
+  return wrap;
+}
+
 async function openReader(r){
   coderBox.classList.add("hidden");
   out.classList.add("hidden");
@@ -391,9 +548,9 @@ async function openReader(r){
   var h = document.createElement("h2"); h.textContent = r.title;
   var orig = document.createElement("a"); orig.className = "orig"; orig.href = safeUrl(r.url); orig.target = "_blank"; orig.rel = "noopener noreferrer"; orig.textContent = "Open original page";
   var tabs = document.createElement("div"); tabs.className = "tabs";
-  var names = { page: "Page view", text: "Text view", code: "Code view" };
+  var names = { page: "Page view", proxy: "Proxy view", text: "Text view", code: "Code view" };
   var btns = {};
-  ["page","text","code"].forEach(function(k){ var b = document.createElement("button"); b.type = "button"; b.className = "tab"; b.textContent = names[k]; btns[k] = b; tabs.appendChild(b); });
+  ["page","proxy","text","code"].forEach(function(k){ var b = document.createElement("button"); b.type = "button"; b.className = "tab"; b.textContent = names[k]; btns[k] = b; tabs.appendChild(b); });
   var srcText = null;
   var bRun = document.createElement("button"); bRun.type = "button"; bRun.className = "tab"; bRun.textContent = "Open in Run your code";
   bRun.onclick = async function(){
@@ -407,7 +564,7 @@ async function openReader(r){
   tabs.appendChild(bRun);
   var bFull = document.createElement("button"); bFull.type = "button"; bFull.className = "tab"; bFull.textContent = "Full screen"; bFull.onclick = function(){ enterFull(fbox); }; tabs.appendChild(bFull);
   if(embedUrl(r.url) !== r.url && /youtube\.com|youtu\.be/i.test(r.url)){ var bRand = document.createElement("button"); bRand.type = "button"; bRand.className = "tab"; bRand.textContent = "\uD83C\uDFB2 Random video"; bRand.onclick = function(){ randomPlay("video"); }; tabs.appendChild(bRand); }
-  var note = document.createElement("div"); note.className = "note"; note.textContent = "If the page below is blank, that site doesn’t allow being shown here. Switch to Text view.";
+  var note = document.createElement("div"); note.className = "note"; note.textContent = "If the page below is blank, that site doesn’t allow being shown here. Try Proxy view, which loads the page through the server.";
   var frame = document.createElement("iframe"); frame.className = "frame";
   frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups");
   var emb = embedUrl(r.url);
@@ -419,9 +576,10 @@ async function openReader(r){
   if(emb !== r.url) note.textContent = "Showing the video player for this link.";
   else if(chanBase) note.textContent = "Finding this channel\u2019s videos...";
   else if(/(^|\.)youtube\.com|youtu\.be/i.test(r.url)) note.textContent = "YouTube\u2019s own pages can\u2019t be shown here, but links to individual videos can. Paste a video link or search for one.";
+  var proxyView = makeProxyView(r.url, null); proxyView.className = "hidden";
   var body = document.createElement("div"); body.className = "body hidden";
   var code = document.createElement("pre"); code.className = "code hidden";
-  reader.appendChild(back); reader.appendChild(h); reader.appendChild(orig); reader.appendChild(tabs); reader.appendChild(note); reader.appendChild(fbox); reader.appendChild(body); reader.appendChild(code);
+  reader.appendChild(back); reader.appendChild(h); reader.appendChild(orig); reader.appendChild(tabs); reader.appendChild(note); reader.appendChild(fbox); reader.appendChild(proxyView); reader.appendChild(body); reader.appendChild(code);
   window.scrollTo(0,0);
   var loaded = { text: false, code: false };
   var resolvedChan = false;
@@ -440,6 +598,7 @@ async function openReader(r){
       frame.src = safeUrl(emb);
     }
     fbox.classList.toggle("hidden", m !== "page"); bFull.classList.toggle("hidden", m !== "page"); note.classList.toggle("hidden", m !== "page");
+    proxyView.classList.toggle("hidden", m !== "proxy"); if(m === "proxy") proxyView.start();
     body.classList.toggle("hidden", m !== "text"); code.classList.toggle("hidden", m !== "code");
     if(m === "text" && !loaded.text){
       loaded.text = true; body.textContent = "Loading page...";
@@ -453,6 +612,7 @@ async function openReader(r){
     }
   }
   btns.page.onclick = function(){ setMode("page"); };
+  btns.proxy.onclick = function(){ setMode("proxy"); };
   btns.text.onclick = function(){ setMode("text"); };
   btns.code.onclick = function(){ setMode("code"); };
   setMode("page");
